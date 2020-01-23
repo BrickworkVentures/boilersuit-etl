@@ -44,11 +44,13 @@ import java.util.stream.Collectors;
  *   be populated with different but connected values (e.g. marcel - marcel@camporelli.ch instead of
  *   marcel - foo@foo.com; to this end, a mapping function must be provided returning the value of
  *   a unique id for the row, like so:
+ * </p>
  *   <pre>
- *     this.obTarget.addPreprocessor(new DbSanitizer(sanitizerConfig, map ->
+ *     this.obTarget.addPreprocessor(new DbSanitizer(sanitizerConfig, map {@literal ->}
  *         Objects.toString(map.get("Id")).replaceAll("null", "")
  *             .concat(Objects.toString(map.get("id")).replaceAll("null", ""))));
  *   </pre>
+ * <p>
  *   The id map is per Db, not per table. However, if different tables have different ids,
  *   concatenation of any available/required id property will usually work (all "unused" id properties
  *   will deliver null).
@@ -76,7 +78,7 @@ public class DbSanitizer implements Preprocessor {
    * If each of your rows can be identified with a unique identifier (may be composed), this
    * is the best constructor to use; if not, use the simple constructor. If your table has a
    * column which is unique, the getIdFromMap function is as simple as
-   * <pre>map -> map.get("id")</pre>
+   * <pre>map {@literal ->} map.get("id")</pre>
    * @param sanitizerConfiguration
    * @param getIdFromMap function mapping a row (Map of properties) to a String which is unique across all rows
    */

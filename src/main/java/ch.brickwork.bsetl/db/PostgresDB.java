@@ -71,4 +71,16 @@ public class PostgresDB extends Db {
     else
       return super.mapValue(o);
   }
+
+  @Override
+  protected String beginTransactionStatement() {
+      return "BEGIN;";
+  }
+
+  @Override
+  protected String quoteIdentifierIfNecessary(String unquotedTableName) {
+      if("to".equalsIgnoreCase(unquotedTableName))
+          return "\"" + unquotedTableName + "\"";
+      return unquotedTableName;
+  }
 }

@@ -98,7 +98,7 @@ public class Db {
    * @param driver
    * @param user
    * @param password
-   * @param maxStatementsPerTransaction if > 0, all statements will be wrapped in BEGIN TRANSACTION..COMMIT; blocks
+   * @param maxStatementsPerTransaction {@literal if > 0}, all statements will be wrapped in BEGIN TRANSACTION..COMMIT; blocks
    * @param executeQueryDumpFile file to dump execute query statements (e.g. inserts), or null
    * @throws ClassNotFoundException
    * @throws SQLException
@@ -126,7 +126,7 @@ public class Db {
     if(maxStatementsPerTransaction > 0) {
       if(con != null)
         con.setAutoCommit(false);
-      appendToFile("BEGIN TRANSACTION\n");
+      appendToFile(beginTransactionStatement() + "\n");
     }
   }
 
@@ -197,7 +197,7 @@ public class Db {
       appendToFile("\n");
 
       if(maxStatementsPerTransaction > 0 && isCommitNecessary()) {
-        appendToFile(commitStatement() + "\nBEGIN TRANSACTION\n");
+        appendToFile(commitStatement() + "\n" + beginTransactionStatement() + "\n");
       }
 
       appendToFile(query);
@@ -268,6 +268,10 @@ public class Db {
       throw new TableNotFoundException(tableName);
     createOrReplaceTable(tableStructure);
     insert(sourceDb.query("SELECT * FROM " + tableName), tableName);
+  }
+
+  protected String beginTransactionStatement() {
+    return "BEGIN TRANSACTION";
   }
 
   protected String commitStatement() {
