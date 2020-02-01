@@ -26,6 +26,7 @@ import ch.brickwork.bsetl.sanitize.constant.InternetDomains;
 import ch.brickwork.bsetl.sanitize.constant.de.HumanNames;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.StringJoiner;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.ArrayUtils;
@@ -36,13 +37,8 @@ import org.apache.commons.lang3.StringUtils;
  * ValueSanitizer for human beings, having first and last names, ensuring that names and email
  * addresses etc. are consistently sanitized within a given context
  */
-public class PersonSanitizer implements ValueSanitizer {
+public class PersonSanitizer extends CorrelatedColumnsSanitizer {
 
-  private final String[] firstNames, lastNames, domains;
-
-  private final String[] nameColumns, emailColumns, firstNameColumns, lastNameColumns;
-
-  private Map<String, PersonCacheItem> contextCache = new HashMap<>();
 
   public PersonSanitizer(String[] nameColumns,
       String[] emailColumns, String[] firstNameColumns, String[] lastNameColumns) {
@@ -54,58 +50,46 @@ public class PersonSanitizer implements ValueSanitizer {
   public PersonSanitizer(String[] firstNames, String[] lastNames, String[] mailDomains,
       String[] nameColumns,
       String[] emailColumns, String[] firstNameColumns, String[] lastNameColumns) {
-    this.firstNames = firstNames;
-    this.lastNames = lastNames;
-    this.domains = mailDomains;
-    this.nameColumns = nameColumns;
-    this.emailColumns = emailColumns;
-    this.firstNameColumns = firstNameColumns;
-    this.lastNameColumns = lastNameColumns;
-  }
 
-  @Override
-  public Object sanitize(Object originalValue, String rowId, String propertyName) {
-    if (originalValue == null) {
-      return null;
+    super(new String[][] {
+        firstNames,
+        lastNames,
+        mailDomains
+    });
+
+    for(String firstNameColumn : firstNameColumns) {
+      super.addColumn(firstNameColumn,
+          components -> capitalizeLowerCase(Objects.toString(components[0])));
     }
-    if (rowId == null) {
-      return RandomSanitizer.random(originalValue.getClass());
+
+    for(String lastNameColumn : lastNameColumns) {
+      super.addColumn(lastNameColumn,
+          components -> capitalizeLowerCase(Objects.toString(components[1])));
     }
-    if (!contextCache.containsKey(rowId)) {
-      contextCache.put(rowId, new PersonCacheItem(
-          ArrayUtils.isEmpty(firstNames) ? null : RandomElementFromSetSanitizer.pickAny(firstNames).toString(),
-          ArrayUtils.isEmpty(lastNames) ? null : RandomElementFromSetSanitizer.pickAny(lastNames).toString(),
-          ArrayUtils.isEmpty(domains) ? null : RandomElementFromSetSanitizer.pickAny(domains).toString(),
-          0));
+
+    for(String nameColumn : nameColumns) {
+      super.addColumn(nameColumn,
+          components ->  new StringJoiner(" ")
+              .add(capitalizeLowerCase(Objects.toString(components[0])))
+              .add(capitalizeLowerCase(Objects.toString(components[1])))
+              .toString());
     }
-    final PersonCacheItem person = contextCache.get(rowId);
-    if (ArrayUtils.contains(nameColumns, propertyName)) {
-      return new StringJoiner(" ")
-          .add(StringUtils.capitalize(person.firstName.toLowerCase()))
-          .add(StringUtils.capitalize(person.lastName.toLowerCase()))
-          .toString();
-    } else if (ArrayUtils.contains(emailColumns, propertyName)) {
-      return new StringJoiner("@")
-          .add(
-              new StringJoiner(".")
-                  .add(ObjectUtils.firstNonNull(StringUtils.lowerCase(person.firstName), ""))
-                  .add(ObjectUtils.firstNonNull(StringUtils.lowerCase(person.lastName), ""))
-                  .toString())
-          .add(ObjectUtils.firstNonNull(person.domain, ""))
-          .toString();
-    } else if (ArrayUtils.contains(firstNameColumns, propertyName)) {
-      return StringUtils.capitalize(person.firstName.toLowerCase());
-    } else if (ArrayUtils.contains(lastNameColumns, propertyName)) {
-      return StringUtils.capitalize(person.lastName.toLowerCase());
-    } else {
-      return RandomSanitizer.random(originalValue.getClass());
+
+    for(String emailColumn : emailColumns) {
+      super.addColumn(emailColumn,
+          components ->  new StringJoiner("@")
+              .add(
+                  new StringJoiner(".")
+                      .add(ObjectUtils.firstNonNull(StringUtils.lowerCase(Objects.toString(components[0])), ""))
+                      .add(ObjectUtils.firstNonNull(StringUtils.lowerCase(Objects.toString(components[1])), ""))
+                      .toString())
+              .add(ObjectUtils.firstNonNull(Objects.toString(components[2]), ""))
+              .toString());
     }
   }
 
-  @AllArgsConstructor
-  private class PersonCacheItem {
-
-    String firstName, lastName, domain;
-    int usageCount;
+  private String capitalizeLowerCase(String s) {
+    return StringUtils.capitalize(StringUtils.lowerCase(s));
   }
+
 }
