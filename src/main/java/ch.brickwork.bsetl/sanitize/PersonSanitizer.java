@@ -41,15 +41,15 @@ public class PersonSanitizer extends CorrelatedColumnsSanitizer {
 
 
   public PersonSanitizer(String[] nameColumns,
-      String[] emailColumns, String[] firstNameColumns, String[] lastNameColumns) {
+      String[] emailColumns, String[] firstNameColumns, String[] lastNameColumns, boolean putFirstnameFirst) {
     this(HumanNames.TOP_SWISS_FIRSTNAMES, HumanNames.TOP_GERMAN_LASTNAMES,
         InternetDomains.RANDOM_MAIL_DOMAINS,
-        nameColumns, emailColumns, firstNameColumns, lastNameColumns);
+        nameColumns, emailColumns, firstNameColumns, lastNameColumns, putFirstnameFirst);
   }
 
   public PersonSanitizer(String[] firstNames, String[] lastNames, String[] mailDomains,
       String[] nameColumns,
-      String[] emailColumns, String[] firstNameColumns, String[] lastNameColumns) {
+      String[] emailColumns, String[] firstNameColumns, String[] lastNameColumns, boolean putFirstnameFirst) {
 
     super(new String[][] {
         firstNames,
@@ -70,8 +70,8 @@ public class PersonSanitizer extends CorrelatedColumnsSanitizer {
     for(String nameColumn : nameColumns) {
       super.addColumn(nameColumn,
           components ->  new StringJoiner(" ")
-              .add(capitalizeLowerCase(Objects.toString(components[0])))
-              .add(capitalizeLowerCase(Objects.toString(components[1])))
+              .add(capitalizeLowerCase(Objects.toString(components[putFirstnameFirst ? 0 : 1])))
+              .add(capitalizeLowerCase(Objects.toString(components[putFirstnameFirst ? 1 : 0])))
               .toString());
     }
 
@@ -80,8 +80,8 @@ public class PersonSanitizer extends CorrelatedColumnsSanitizer {
           components ->  new StringJoiner("@")
               .add(
                   new StringJoiner(".")
-                      .add(ObjectUtils.firstNonNull(StringUtils.lowerCase(Objects.toString(components[0])), ""))
-                      .add(ObjectUtils.firstNonNull(StringUtils.lowerCase(Objects.toString(components[1])), ""))
+                      .add(ObjectUtils.firstNonNull(StringUtils.lowerCase(Objects.toString(components[putFirstnameFirst ? 0 : 1])), ""))
+                      .add(ObjectUtils.firstNonNull(StringUtils.lowerCase(Objects.toString(components[putFirstnameFirst ? 1 : 0])), ""))
                       .toString())
               .add(ObjectUtils.firstNonNull(Objects.toString(components[2]), ""))
               .toString());

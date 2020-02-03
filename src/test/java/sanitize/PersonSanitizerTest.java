@@ -24,7 +24,8 @@ public class PersonSanitizerTest {
         new String[] { "myNameCol1", "myNameCol2" },
         new String[] { "myEmailCol1", "myEmailCol2" },
         new String[] { "myFirstNameCol1", "myFirstNameCol2" },
-        new String[] { "myLastNameCol1", "myLastNameCol2" }
+        new String[] { "myLastNameCol1", "myLastNameCol2" },
+        true
     );
 
     final Map<String, Object> record = new HashMap<>();

@@ -25,6 +25,7 @@ package ch.brickwork.bsetl.sanitize;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -55,7 +56,12 @@ public class CorrelatedColumnsSanitizer implements ValueSanitizer {
    */
   public CorrelatedColumnsSanitizer(String[][] components, Function<Object[], Object> defaultValueBuilder) {
     this.components = components;
-    this.defaultValueBuilder = defaultValueBuilder == null ? c -> null : defaultValueBuilder;
+    this.defaultValueBuilder = defaultValueBuilder == null ?
+        // if null, add builder to concatenate components, separated by whitespace
+        comps -> Stream.of(comps)
+            .map(comp -> String.valueOf(comp))
+            .collect(Collectors.joining(" "))
+        : defaultValueBuilder;
   }
 
   /**
@@ -67,7 +73,8 @@ public class CorrelatedColumnsSanitizer implements ValueSanitizer {
    *   myCorrelatatedColSan.addColumn("email", c -> c[0] + "." + c[1] + "@" + c[2]
    * </pre>
    * @param columnName column name
-   * @param valueBuilder function to build the column value given n random components
+   * @param valueBuilder function to build the column value given n random components; use null
+   *  for default whitespace-separated concatenation
    */
   public void addColumn(String columnName, Function<Object[], Object> valueBuilder) {
     valueBuilders.put(columnName, valueBuilder);
@@ -78,7 +85,8 @@ public class CorrelatedColumnsSanitizer implements ValueSanitizer {
    * @param rowId if available, unique id identifying the row on which this value sits
    * @param propertyName name of the property
    * @return result, built according valueBuilder for this property (cf. addColumn),
-   *   or using default value builder (if available), or null
+   *   or using default value builder (if available), or simply concatenating whitespace separated
+   *   as a default
    */
   @Override
   public Object sanitize(Object originalValue, String rowId, String propertyName) {
