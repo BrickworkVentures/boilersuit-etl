@@ -32,8 +32,13 @@ import java.util.stream.Stream;
  * a row context
  */
 public class CorrelatedColumnsSanitizer implements ValueSanitizer {
+
   private final Object[][] components;
+
   private final Map<String, Function<Object[], Object>> valueBuilders = new HashMap<>();
+
+  private final Function<Object[], Object> defaultValueBuilder;
+
   private Map<String, Object[]> contextCache = new HashMap<>();
 
   /**
@@ -45,9 +50,12 @@ public class CorrelatedColumnsSanitizer implements ValueSanitizer {
    *     ...
    *   }
    * </pre>
+   * @param components array of component arrays
+   * @param defaultValueBuilder result builder function for columns not specifically added via addColumn, can be null
    */
-  public CorrelatedColumnsSanitizer(String[][] components) {
+  public CorrelatedColumnsSanitizer(String[][] components, Function<Object[], Object> defaultValueBuilder) {
     this.components = components;
+    this.defaultValueBuilder = defaultValueBuilder == null ? c -> null : defaultValueBuilder;
   }
 
   /**
@@ -65,6 +73,13 @@ public class CorrelatedColumnsSanitizer implements ValueSanitizer {
     valueBuilders.put(columnName, valueBuilder);
   }
 
+  /**
+   * @param originalValue original value, which may be sensitive
+   * @param rowId if available, unique id identifying the row on which this value sits
+   * @param propertyName name of the property
+   * @return result, built according valueBuilder for this property (cf. addColumn),
+   *   or using default value builder (if available), or null
+   */
   @Override
   public Object sanitize(Object originalValue, String rowId, String propertyName) {
     if (originalValue == null) {
@@ -82,6 +97,8 @@ public class CorrelatedColumnsSanitizer implements ValueSanitizer {
 
       if (valueBuilders.containsKey(propertyName)) {
         return valueBuilders.get(propertyName).apply(componentValues);
+      } else {
+        return defaultValueBuilder.apply(componentValues);
       }
     }
 

@@ -55,7 +55,7 @@ public class PersonSanitizer extends CorrelatedColumnsSanitizer {
         firstNames,
         lastNames,
         mailDomains
-    });
+    }, null);
 
     for(String firstNameColumn : firstNameColumns) {
       super.addColumn(firstNameColumn,
