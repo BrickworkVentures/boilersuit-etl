@@ -27,6 +27,7 @@ import ch.brickwork.bsetl.db.exception.MoreThanOneRowPresentException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -169,6 +170,14 @@ public class Result {
   public int size() throws SQLException {
     if(listOfRowMaps == null) getRowsAsMap();     // init first, if necessary
     return CollectionUtils.size(listOfRowMaps);
+  }
+
+  /**
+   * @return merged set of unique entries from r1 and r2
+   * @throws SQLException
+   */
+  public static List<Map<String, Object>> merge(Result r1, Result r2) throws SQLException {
+    return new ArrayList(SetUtils.union(new HashSet(r1.getRowsAsMap()), new HashSet(r2.getRowsAsMap())));
   }
 
 }

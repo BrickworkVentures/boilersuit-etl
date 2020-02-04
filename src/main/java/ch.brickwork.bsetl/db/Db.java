@@ -40,6 +40,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -65,7 +66,7 @@ public class Db {
 
   private static String DEFAULT_PASSWORD = "";
 
-  private final Connection con;
+  private Connection con;
 
   private FileWriter executeQueryDumpFileWriter;
 
@@ -107,11 +108,15 @@ public class Db {
       int maxStatementsPerTransaction)
       throws ClassNotFoundException, SQLException, IOException {
 
+    this.user = user;
+    this.password = password;
+    this.driver = driver;
+    this.url = url;
+
+
     if(url != null) {
       Class.forName(this.driver = driver);
-      con = DriverManager
-          .getConnection(this.url = url, this.user = user,
-              this.password = password);
+      getConnection();
     } else {
       con = null;
     }
@@ -128,6 +133,14 @@ public class Db {
         con.setAutoCommit(false);
       appendToFile(beginTransactionStatement() + "\n");
     }
+  }
+
+  private void getConnection() throws SQLException {
+    if(con != null && con.isValid(1))
+      con.close();
+    con = DriverManager
+        .getConnection(this.url, this.user,
+            this.password);
   }
 
   /**
@@ -231,21 +244,33 @@ public class Db {
    */
   public void insert(Result rowsToInsert, String targetTableName)
       throws SQLException, IOException, OperationNotAllowedException {
-    System.out.println("Inserting " + rowsToInsert.countRows() + " into " + targetTableName);
+    insert(rowsToInsert.getRowsAsMap(), targetTableName);
+  }
 
-    if(rowsToInsert.getRowsAsMap().size() == 0) {
+  /**
+   * insert a result into table "targetTableName" on this connection. rows will be preprocessed
+   * (if preprocessors available). rows will be truncated in too long for target structure.
+   * @param rowsToInsert
+   * @param targetTableName
+   * @throws SQLException
+   */
+  public void insert(List<Map<String, Object>> rowsToInsert, String targetTableName)
+      throws SQLException, IOException, OperationNotAllowedException {
+    System.out.println("Inserting " + rowsToInsert.size() + " into " + targetTableName);
+
+    if(rowsToInsert.size() == 0) {
       System.out.println("...table is empty");
       return;
     }
 
-    final ArrayList<String> keys = new ArrayList(rowsToInsert.getRowsAsMap().get(0).keySet());
-    for(Map<String, Object> unprocessedRow : rowsToInsert.getRowsAsMap()) {
+    final ArrayList<String> keys = new ArrayList(rowsToInsert.get(0).keySet());
+    for(Map<String, Object> unprocessedRow : rowsToInsert) {
       final Map<String, ?> row = truncate(preprocess(targetTableName, unprocessedRow), targetTableName);
       final String sql = "INSERT INTO " + quoteIdentifierIfNecessary(targetTableName) +
           // comma-separated column names
           "(" + keys.stream()
-            .map(key -> quoteIdentifierIfNecessary(key))
-            .collect(Collectors.joining(",")) + ")" +
+          .map(key -> quoteIdentifierIfNecessary(key))
+          .collect(Collectors.joining(",")) + ")" +
 
           // values keyword
           " VALUES " +
@@ -384,6 +409,17 @@ public class Db {
     tables.put(tableStructure.getTableName(), tableStructure);
 
     return execute(sql);
+  }
+
+  public void cleanDuplicates(String tableName, String uniqueKeyPropertyName)
+      throws SQLException, IOException {
+    execute("DELETE FROM " + tableName + " a USING ("
+        + "      SELECT MIN(ctid) as ctid, " + uniqueKeyPropertyName
+        + "        FROM " + tableName
+        + "        GROUP BY " + uniqueKeyPropertyName + " HAVING COUNT(*) > 1"
+        + "      ) b"
+        + "      WHERE a." + uniqueKeyPropertyName + " = b." + uniqueKeyPropertyName
+        + "      AND a.ctid <> b.ctid;");
   }
 
   protected void dropIfExists(String tableName)
