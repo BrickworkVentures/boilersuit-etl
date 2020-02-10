@@ -6,7 +6,7 @@
 
     <groupId>ch.brickwork.bsetl</groupId>
     <artifactId>boilersuit-etl</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
     <packaging>jar</packaging>
 
     <name>boilersuit-etl</name>
