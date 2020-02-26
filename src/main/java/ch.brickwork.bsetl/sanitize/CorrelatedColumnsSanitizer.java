@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.collections4.SetUtils;
 
 /**
  * ValueSanitizer for 1..n columns where values must be built consistently accross within a row
