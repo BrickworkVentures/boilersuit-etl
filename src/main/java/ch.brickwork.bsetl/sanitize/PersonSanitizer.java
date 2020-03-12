@@ -24,12 +24,8 @@ package ch.brickwork.bsetl.sanitize;
 
 import ch.brickwork.bsetl.sanitize.constant.InternetDomains;
 import ch.brickwork.bsetl.sanitize.constant.de.HumanNames;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
-import lombok.AllArgsConstructor;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -85,11 +81,34 @@ public class PersonSanitizer extends CorrelatedColumnsSanitizer {
                       .toString())
               .add(ObjectUtils.firstNonNull(Objects.toString(components[2]), ""))
               .toString());
+      replaceInvalidEmailCharacters(emailColumn);
     }
   }
 
   private String capitalizeLowerCase(String s) {
     return StringUtils.capitalize(StringUtils.lowerCase(s));
+  }
+
+  private void replaceInvalidEmailCharacters(String s) {
+    s.replace("ä", "ae")
+            .replace("à", "a")
+            .replace("á", "a")
+            .replace("â", "a")
+            .replace("ç", "c")
+            .replace("è", "e")
+            .replace("é", "e")
+            .replace("ë", "e")
+            .replace("ê", "e")
+            .replace("ï", "i")
+            .replace("î", "i")
+            .replace("ñ", "n")
+            .replace("ö", "oe")
+            .replace("ô", "o")
+            .replace("ü", "ue")
+            .replace("û", "u")
+            .replace("ù", "u")
+            .replace("ß", "ss")
+            .replace("ÿ", "y");
   }
 
 }
