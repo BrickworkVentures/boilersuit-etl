@@ -22,7 +22,6 @@
 
 package ch.brickwork.bsetl.db;
 
-import ch.brickwork.bsetl.db.TableStructure.PropertyStructure;
 import ch.brickwork.bsetl.db.exception.MapValueException;
 import ch.brickwork.bsetl.db.exception.OperationNotAllowedException;
 import ch.brickwork.bsetl.db.exception.TableNotFoundException;
@@ -55,7 +54,7 @@ import org.apache.commons.text.StringEscapeUtils;
  */
 @Getter
 public class Db {
-  
+
   private static String DEFAULT_DRIVER_CLASS_NAME = "org.h2.Driver";
 
   private static String DEFAULT_URL = "jdbc:h2:file:~/default.h2";
@@ -82,6 +81,8 @@ public class Db {
   private Map<String, Long> insertCounts = new HashMap<>();
 
   private IdentityHashMap<String, TableStructure> tables = new IdentityHashMap<>();
+
+  private IdentityHashMap<String, ViewStructure> views = new IdentityHashMap<>();
 
   /**
    * open connection to default, can be used for testing purposes and opens a H2 file DB
@@ -295,6 +296,14 @@ public class Db {
     insert(sourceDb.query("SELECT * FROM " + tableName), tableName);
   }
 
+  public void copyView(String viewName, Db sourceDb)
+      throws SQLException, IOException, OperationNotAllowedException {
+    final ViewStructure viewStructure = sourceDb.getViewStructure(viewName);
+    if(viewStructure == null)
+      throw new TableNotFoundException(viewName);
+    createView(viewStructure);
+  }
+
   protected String beginTransactionStatement() {
     return "BEGIN TRANSACTION";
   }
@@ -397,7 +406,7 @@ public class Db {
   public boolean createOrReplaceTable(TableStructure tableStructure)
       throws SQLException, IOException, OperationNotAllowedException {
     if(con != null)
-      dropIfExists(tableStructure.getTableName());
+      dropTableIfExists(tableStructure.getTableName());
 
     final String sql = "CREATE TABLE " + quoteIdentifierIfNecessary(tableStructure.getTableName()) + "(" +
         tableStructure.getColumns().keySet().stream()
@@ -422,10 +431,50 @@ public class Db {
         + "      AND a.ctid <> b.ctid;");
   }
 
-  protected void dropIfExists(String tableName)
+  protected void dropTableIfExists(String tableName)
       throws SQLException, IOException, OperationNotAllowedException {
     if(getTableStructure(tableName) != null)
       execute("DROP TABLE IF EXISTS " + quoteIdentifierIfNecessary(tableName) + " ;");
+  }
+
+  public ViewStructure getViewStructure(String viewName)
+      throws SQLException {
+    if(con == null)
+      return views.get(viewName);
+
+    Statement sProperties = con.createStatement();
+    ResultSet rsDefinition = sProperties.executeQuery(getViewDefinitionStatement(viewName));
+    if (!rsDefinition.next()) {
+      throw new IllegalArgumentException("View with name " + viewName +  " not found");
+    }
+    ViewStructure viewStructure = new ViewStructure(viewName, rsDefinition.getString("view_definition"));
+    if (rsDefinition.next()) {
+      throw new IllegalArgumentException("Found more than one view with name " + viewName);
+    }
+
+    return viewStructure;
+  }
+
+  public boolean createView(ViewStructure viewStructure)
+      throws SQLException, IOException, OperationNotAllowedException {
+    if (con != null) {
+      dropViewIfExists(viewStructure.getViewName());
+    }
+
+    final String viewName = quoteIdentifierIfNecessary(viewStructure.getViewName());
+    final String viewDefinition = viewStructure.getViewDefinition();
+    final String sql = "CREATE VIEW " + viewName + " AS " + viewDefinition;
+
+    // remember
+    views.put(viewStructure.getViewName(), viewStructure);
+
+    return execute(sql);
+  }
+
+  protected void dropViewIfExists(String viewName)
+      throws SQLException, IOException, OperationNotAllowedException {
+    if(getTableStructure(viewName) != null)
+      execute("DROP VIEW IF EXISTS " + quoteIdentifierIfNecessary(viewName) + " ;");
   }
 
   //
@@ -566,6 +615,10 @@ public class Db {
     return "select * from information_schema.columns where lower(table_name)='" + name.toLowerCase() + "'";
   }
 
+  private static String getViewDefinitionStatement(String name) {
+    return "select view_definition from information_schema.views where lower(table_name)='" + name.toLowerCase() + "'";
+  }
+
   private void commitIfNecessary() throws SQLException {
     if(con != null && isCommitNecessary())
       con.commit();
@@ -574,5 +627,4 @@ public class Db {
   private boolean isCommitNecessary() {
     return maxStatementsPerTransaction > 0 && statementCount % maxStatementsPerTransaction == 0;
   }
-
 }

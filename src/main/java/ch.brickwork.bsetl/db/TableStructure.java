@@ -24,7 +24,6 @@ package ch.brickwork.bsetl.db;
 
 import java.util.Map;
 import java.util.TreeMap;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
@@ -41,12 +40,4 @@ public class TableStructure {
   public void addColumn(String columnName, String dataType, Integer length) {
     columns.put(columnName, new PropertyStructure(columnName, dataType, length != null && length > 0 ? length : null));
   }
-
-  @Getter
-  @AllArgsConstructor
-  public class PropertyStructure {
-    private String columnName, dataType;
-    private Integer length;
-  }
-
 }
